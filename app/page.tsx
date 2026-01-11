@@ -23,7 +23,8 @@ export default function Home() {
     setIsLoading(true);
 
     try {
-      const response = await fetch("http://localhost:8080/ask", {
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
+      const response = await fetch(`${apiUrl}/ask`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -37,13 +38,25 @@ export default function Home() {
 
       const data = await response.json();
 
+      // Check if there's an error in the response
+      if (data.error) {
+        throw new Error(data.error);
+      }
+
       // Add assistant message to chat
-      setMessages((prev) => [...prev, { role: "assistant", content: data.answer }]);
-    } catch (error) {
-      console.error("Error:", error);
       setMessages((prev) => [
         ...prev,
-        { role: "assistant", content: "エラーが発生しました。もう一度お試しください。" },
+        { role: "assistant", content: data.answer || "応答がありませんでした。" },
+      ]);
+    } catch (error) {
+      console.error("Error:", error);
+      const errorMessage = error instanceof Error ? error.message : "不明なエラー";
+      setMessages((prev) => [
+        ...prev,
+        {
+          role: "assistant",
+          content: `エラーが発生しました: ${errorMessage}\n\nバックエンドが起動しているか確認してください。`,
+        },
       ]);
     } finally {
       setIsLoading(false);
